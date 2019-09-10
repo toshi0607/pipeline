@@ -450,7 +450,7 @@ func TestUpdateExistingComments(t *testing.T) {
 	comment3.Body = github.String("tacocat")
 
 	comments := map[int64]*Comment{
-		// Non-existant comment. Should be ignored.
+		// Non-existent comment. Should be ignored.
 		8675309: {
 			ID:   8675309,
 			Text: comment.GetBody(),
@@ -501,7 +501,7 @@ func TestUploadComments(t *testing.T) {
 	comment3.Body = github.String("tacocat")
 
 	comments := []*Comment{
-		// Non-existant comment. Should be ignored.
+		// Non-existent comment. Should be ignored.
 		{
 			ID:   8675309,
 			Text: comment.GetBody(),
