@@ -7,10 +7,12 @@ spec:
     resources:
       - name: git-repo
         type: git
+        description: "The input is code from a git repository"
         optional: true
     params:
       - name: filename
         type: string
+        description: "The output is a Docker image"
         default: "README.md"
   outputs:
     resources:
