@@ -41,7 +41,7 @@ func TestPipeline(t *testing.T) {
 			tb.PipelineTaskParam("arrayparam", "array", "value"),
 			tb.PipelineTaskCondition("some-condition-ref",
 				tb.PipelineTaskConditionParam("param-name", "param-value"),
-				tb.PipelineTaskConditionResource("some-resource", "my-only-git-resource"),
+				tb.PipelineTaskConditionResource("some-resource", "my-only-git-resource", "bar", "never-gonna"),
 			),
 		),
 		tb.PipelineTask("bar", "chocolate",
@@ -93,9 +93,10 @@ func TestPipeline(t *testing.T) {
 							StringVal: "param-value",
 						},
 					}},
-					Resources: []v1alpha1.PipelineConditionResource{{
+					Resources: []v1alpha1.PipelineTaskInputResource{{
 						Name:     "some-resource",
 						Resource: "my-only-git-resource",
+						From:     []string{"bar", "never-gonna"},
 					}},
 				}},
 			}, {
@@ -260,6 +261,35 @@ func TestPipelineRunWithResourceSpec(t *testing.T) {
 	}
 	if d := cmp.Diff(expectedPipelineRun, pipelineRun); d != "" {
 		t.Fatalf("PipelineRun diff -want, +got: %v", d)
+	}
+}
+
+func TestPipelineRunWithPipelineSpec(t *testing.T) {
+	pipelineRun := tb.PipelineRun("pear", "foo", tb.PipelineRunSpec("", tb.PipelineRunPipelineSpec(
+		tb.PipelineTask("a-task", "some-task")),
+		tb.PipelineRunServiceAccountName("sa"),
+	))
+
+	expectedPipelineRun := &v1alpha1.PipelineRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pear",
+			Namespace: "foo",
+		},
+		Spec: v1alpha1.PipelineRunSpec{
+			PipelineRef: nil,
+			PipelineSpec: &v1alpha1.PipelineSpec{
+				Tasks: []v1alpha1.PipelineTask{{
+					Name:    "a-task",
+					TaskRef: v1alpha1.TaskRef{Name: "some-task"},
+				}},
+			},
+			ServiceAccountName: "sa",
+			Timeout:            &metav1.Duration{Duration: 1 * time.Hour},
+		},
+	}
+
+	if diff := cmp.Diff(expectedPipelineRun, pipelineRun); diff != "" {
+		t.Fatalf("PipelineRun diff -want, +got: %s", diff)
 	}
 }
 

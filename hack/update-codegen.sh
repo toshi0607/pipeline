@@ -18,13 +18,23 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-source $(dirname $0)/../vendor/github.com/tektoncd/plumbing/scripts/library.sh
+source $(git rev-parse --show-toplevel)/vendor/github.com/tektoncd/plumbing/scripts/library.sh
 
+OLDGOFLAGS="${GOFLAGS:-}"
+GOFLAGS="-mod=vendor"
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
-
+# This generates deepcopy,client,informer and lister for the resource package (v1alpha1)
+# This is separate from the pipeline package as resource are staying in v1alpha1 and they
+# need to be separated (at least in terms of go package) from the pipeline's packages to
+# not having dependency cycle.
+bash ${REPO_ROOT_DIR}/hack/generate-groups.sh "deepcopy,client,informer,lister" \
+  github.com/tektoncd/pipeline/pkg/client/resource github.com/tektoncd/pipeline/pkg/apis \
+  "resource:v1alpha1" \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+# This generates deepcopy,client,informer and lister for the pipeline package (v1alpha1 and v1alpha2)
 bash ${REPO_ROOT_DIR}/hack/generate-groups.sh "deepcopy,client,informer,lister" \
   github.com/tektoncd/pipeline/pkg/client github.com/tektoncd/pipeline/pkg/apis \
   "pipeline:v1alpha1,v1alpha2" \
@@ -37,10 +47,18 @@ ${GOPATH}/bin/deepcopy-gen \
   -i github.com/tektoncd/pipeline/pkg/apis/config
 
 # Knative Injection
+# This generates the knative injection packages for the resource package (v1alpha1).
+# This is separate from the pipeline package for the same reason as client and all (see above).
+bash ${REPO_ROOT_DIR}/hack/generate-knative.sh "injection" \
+  github.com/tektoncd/pipeline/pkg/client/resource github.com/tektoncd/pipeline/pkg/apis \
+  "resource:v1alpha1" \
+  --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+# This generates the knative inject packages for the pipeline package (v1alpha1, v1alpha2).
 bash ${REPO_ROOT_DIR}/hack/generate-knative.sh "injection" \
   github.com/tektoncd/pipeline/pkg/client github.com/tektoncd/pipeline/pkg/apis \
   "pipeline:v1alpha1,v1alpha2" \
   --go-header-file ${REPO_ROOT_DIR}/hack/boilerplate/boilerplate.go.txt
+GOFLAGS="${OLDGOFLAGS}"
 
 # Make sure our dependencies are up-to-date
 ${REPO_ROOT_DIR}/hack/update-deps.sh

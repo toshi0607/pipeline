@@ -17,42 +17,45 @@ limitations under the License.
 package pod
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/tektoncd/pipeline/pkg/apis/pipeline/v1alpha1"
+	"github.com/tektoncd/pipeline/pkg/logging"
+	"github.com/tektoncd/pipeline/pkg/termination"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
 )
 
 const (
-	// reasonCouldntGetTask indicates that the reason for the failure status is that the
+	// ReasonCouldntGetTask indicates that the reason for the failure status is that the
 	// Task couldn't be found
 	ReasonCouldntGetTask = "CouldntGetTask"
 
-	// reasonFailedResolution indicated that the reason for failure status is
+	// ReasonFailedResolution indicated that the reason for failure status is
 	// that references within the TaskRun could not be resolved
 	ReasonFailedResolution = "TaskRunResolutionFailed"
 
-	// reasonFailedValidation indicated that the reason for failure status is
+	// ReasonFailedValidation indicated that the reason for failure status is
 	// that taskrun failed runtime validation
 	ReasonFailedValidation = "TaskRunValidationFailed"
 
-	// reasonRunning indicates that the reason for the inprogress status is that the TaskRun
+	// ReasonRunning indicates that the reason for the inprogress status is that the TaskRun
 	// is just starting to be reconciled
 	ReasonRunning = "Running"
 
-	// reasonTimedOut indicates that the TaskRun has taken longer than its configured timeout
+	// ReasonTimedOut indicates that the TaskRun has taken longer than its configured timeout
 	ReasonTimedOut = "TaskRunTimeout"
 
-	// reasonExceededResourceQuota indicates that the TaskRun failed to create a pod due to
+	// ReasonExceededResourceQuota indicates that the TaskRun failed to create a pod due to
 	// a ResourceQuota in the namespace
 	ReasonExceededResourceQuota = "ExceededResourceQuota"
 
-	// reasonExceededNodeResources indicates that the TaskRun's pod has failed to start due
+	// ReasonExceededNodeResources indicates that the TaskRun's pod has failed to start due
 	// to resource constraints on the node
 	ReasonExceededNodeResources = "ExceededNodeResources"
 
@@ -63,6 +66,8 @@ const (
 	// ReasonFailed indicates that the reason for the failure status is unknown or that one of the steps failed
 	ReasonFailed = "Failed"
 )
+
+const oomKilled = "OOMKilled"
 
 // SidecarsReady returns true if all of the Pod's sidecars are Ready or
 // Terminated.
@@ -106,8 +111,41 @@ func MakeTaskRunStatus(tr v1alpha1.TaskRun, pod *corev1.Pod, taskSpec v1alpha1.T
 
 	trs.Steps = []v1alpha1.StepState{}
 	trs.Sidecars = []v1alpha1.SidecarState{}
+	logger, _ := logging.NewLogger("", "status")
+	defer func() {
+		_ = logger.Sync()
+	}()
+
 	for _, s := range pod.Status.ContainerStatuses {
 		if isContainerStep(s.Name) {
+			if s.State.Terminated != nil && len(s.State.Terminated.Message) != 0 {
+				msg := s.State.Terminated.Message
+				r, err := termination.ParseMessage(msg)
+				if err != nil {
+					logger.Errorf("Could not parse json message %q because of %w", msg, err)
+					break
+				}
+				for index, result := range r {
+					if result.Key == "StartedAt" {
+						t, err := time.Parse(time.RFC3339, result.Value)
+						if err != nil {
+							logger.Errorf("Could not parse time: %q: %w", result.Value, err)
+							break
+						}
+						s.State.Terminated.StartedAt = metav1.NewTime(t)
+						// remove the entry for the starting time
+						r = append(r[:index], r[index+1:]...)
+						if len(r) == 0 {
+							s.State.Terminated.Message = ""
+						} else if bytes, err := json.Marshal(r); err != nil {
+							logger.Errorf("Error marshalling remaining results: %w", err)
+						} else {
+							s.State.Terminated.Message = string(bytes)
+						}
+						break
+					}
+				}
+			}
 			trs.Steps = append(trs.Steps, v1alpha1.StepState{
 				ContainerState: *s.State.DeepCopy(),
 				Name:           trimStepPrefix(s.Name),
@@ -190,7 +228,7 @@ func didTaskRunFail(pod *corev1.Pod) bool {
 	for _, s := range pod.Status.ContainerStatuses {
 		if isContainerStep(s.Name) {
 			if s.State.Terminated != nil {
-				f = f || s.State.Terminated.ExitCode != 0
+				f = f || s.State.Terminated.ExitCode != 0 || isOOMKilled(s)
 			}
 		}
 	}
@@ -223,6 +261,17 @@ func getFailureMessage(pod *corev1.Pod) string {
 	if pod.Status.Message != "" {
 		return pod.Status.Message
 	}
+
+	for _, s := range pod.Status.ContainerStatuses {
+		if isContainerStep(s.Name) {
+			if s.State.Terminated != nil {
+				if isOOMKilled(s) {
+					return oomKilled
+				}
+			}
+		}
+	}
+
 	// Lastly fall back on a generic error message.
 	return "build failed for unspecified reasons."
 }
@@ -321,4 +370,8 @@ func (trt *stepStateSorter) Less(i, j int) bool {
 	// and how to change the index. We set it to true here in order to iterate all the
 	// elements of the array in the Swap function.
 	return true
+}
+
+func isOOMKilled(s corev1.ContainerStatus) bool {
+	return s.State.Terminated.Reason == oomKilled
 }

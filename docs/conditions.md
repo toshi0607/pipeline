@@ -10,6 +10,7 @@ This document defines `Conditions` and their capabilities.
   - [Check](#check)
   - [Parameters](#parameters)
   - [Resources](#resources)
+- [Labels](#labels)
 - [Examples](#examples)
 
 ## Syntax
@@ -34,10 +35,9 @@ following fields:
 ### Check
 
 The `check` field is required. You define a single check to define the body of a `Condition`. The 
-check must specify a container image that adheres to the [container contract](./container-contract.md). 
-The container image runs till completion. The container must exit successfully i.e. with an exit code 0 
-for the condition evaluation to be successful. All other exit codes are considered to be a condition check
-failure.
+check must specify a [`Step`](./tasks.md#steps). The container image runs till completion. The container 
+must exit successfully i.e. with an exit code 0 for the condition evaluation to be successful. All other 
+exit codes are considered to be a condition check failure.
 
 ### Parameters
 
@@ -70,6 +70,10 @@ provide the Condition container step with data or context that is needed to perf
 Resources in Conditions work similar to the way they work in `Tasks` i.e. they can be accessed using
 [variable substitution](./resources.md#variable-substitution) and the `targetPath` field can be used
 to [control where the resource is mounted](./resources.md#controlling-where-resources-are-mounted)
+
+## Labels
+
+[Labels](labels.md) defined as part of the `Condition` metadata will be automatically propagated to the `Pod`.
 
 ## Examples
 

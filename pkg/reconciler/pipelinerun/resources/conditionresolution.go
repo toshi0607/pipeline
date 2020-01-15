@@ -96,7 +96,7 @@ func (rcc *ResolvedConditionCheck) ConditionToTaskSpec() (*v1alpha1.TaskSpec, er
 	}
 
 	t := &v1alpha1.TaskSpec{
-		Steps: []v1alpha1.Step{{Container: rcc.Condition.Spec.Check}},
+		Steps: []v1alpha1.Step{rcc.Condition.Spec.Check},
 	}
 
 	t.Inputs = &v1alpha1.Inputs{
@@ -130,7 +130,8 @@ func convertParamTemplates(step *v1alpha1.Step, params []v1alpha1.ParamSpec) {
 	v1alpha1.ApplyStepReplacements(step, replacements, map[string][]string{})
 }
 
-// ApplyResourceSubstitution applies resource attribute variable substitution.
+// ApplyResources applies the substitution from values in resources which are referenced
+// in spec as subitems of the replacementStr.
 func ApplyResourceSubstitution(step *v1alpha1.Step, resolvedResources map[string]*v1alpha1.PipelineResource, conditionResources []v1alpha1.ResourceDeclaration, images pipeline.Images) error {
 	replacements := make(map[string]string)
 	for _, cr := range conditionResources {

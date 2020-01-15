@@ -291,6 +291,9 @@ func TestReconcile_InvalidPipelineRuns(t *testing.T) {
 			tb.TaskInputs(tb.InputsParamSpec("some-param", v1alpha1.ParamTypeString)))),
 		tb.Task("a-task-that-needs-array-params", "foo", tb.TaskSpec(
 			tb.TaskInputs(tb.InputsParamSpec("some-param", v1alpha1.ParamTypeArray)))),
+		tb.Task("a-task-that-needs-a-resource", "ns", tb.TaskSpec(
+			tb.TaskInputs(tb.InputsResource("workspace", "git")),
+		)),
 	}
 	ps := []*v1alpha1.Pipeline{
 		tb.Pipeline("pipeline-missing-tasks", "foo", tb.PipelineSpec(
@@ -320,6 +323,18 @@ func TestReconcile_InvalidPipelineRuns(t *testing.T) {
 		tb.PipelineRun("pipeline-resources-not-declared", "foo", tb.PipelineRunSpec("a-pipeline-that-should-be-caught-by-admission-control")),
 		tb.PipelineRun("pipeline-mismatching-param-type", "foo", tb.PipelineRunSpec("a-pipeline-with-array-params", tb.PipelineRunParam("some-param", "stringval"))),
 		tb.PipelineRun("pipeline-conditions-missing", "foo", tb.PipelineRunSpec("a-pipeline-with-missing-conditions")),
+		tb.PipelineRun("embedded-pipeline-resources-not-bound", "foo", tb.PipelineRunSpec("", tb.PipelineRunPipelineSpec(
+			tb.PipelineTask("some-task", "a-task-that-needs-a-resource"),
+			tb.PipelineDeclaredResource("workspace", "git"),
+		))),
+		tb.PipelineRun("embedded-pipeline-invalid", "foo", tb.PipelineRunSpec("", tb.PipelineRunPipelineSpec(
+			tb.PipelineTask("bad-t@$k", "b@d-t@$k"),
+		))),
+		tb.PipelineRun("embedded-pipeline-mismatching-param-type", "foo", tb.PipelineRunSpec("", tb.PipelineRunPipelineSpec(
+			tb.PipelineParamSpec("some-param", v1alpha1.ParamTypeArray),
+			tb.PipelineTask("some-task", "a-task-that-needs-array-params")),
+			tb.PipelineRunParam("some-param", "stringval"),
+		)),
 	}
 	d := test.Data{
 		Tasks:        ts,
@@ -365,6 +380,18 @@ func TestReconcile_InvalidPipelineRuns(t *testing.T) {
 			name:        "invalid-pipeline-missing-conditions-shd-stop-reconciling",
 			pipelineRun: prs[7],
 			reason:      ReasonCouldntGetCondition,
+		}, {
+			name:        "invalid-embedded-pipeline-resources-bot-bound-shd-stop-reconciling",
+			pipelineRun: prs[8],
+			reason:      ReasonInvalidBindings,
+		}, {
+			name:        "invalid-embedded-pipeline-bad-name-shd-stop-reconciling",
+			pipelineRun: prs[9],
+			reason:      ReasonFailedValidation,
+		}, {
+			name:        "invalid-embedded-pipeline-mismatching-parameter-types",
+			pipelineRun: prs[10],
+			reason:      ReasonParameterTypeMismatch,
 		},
 	}
 
@@ -394,7 +421,12 @@ func TestReconcile_InvalidPipelineRuns(t *testing.T) {
 				t.Errorf("Expected failure to be because of reason %q but was %s", tc.reason, condition.Reason)
 			}
 			if !tc.hasNoDefaultLabels {
-				expectedLabels := map[string]string{pipeline.GroupName + pipeline.PipelineLabelKey: tc.pipelineRun.Spec.PipelineRef.Name}
+				expectedPipelineLabel := tc.pipelineRun.Name
+				// Embedded pipelines use the pipelinerun name
+				if tc.pipelineRun.Spec.PipelineRef != nil {
+					expectedPipelineLabel = tc.pipelineRun.Spec.PipelineRef.Name
+				}
+				expectedLabels := map[string]string{pipeline.GroupName + pipeline.PipelineLabelKey: expectedPipelineLabel}
 				if len(tc.pipelineRun.ObjectMeta.Labels) != len(expectedLabels) {
 					t.Errorf("Expected labels : %v, got %v", expectedLabels, tc.pipelineRun.ObjectMeta.Labels)
 				}
@@ -1290,12 +1322,24 @@ func TestReconcileWithConditionChecks(t *testing.T) {
 	names.TestingSeed()
 	prName := "test-pipeline-run"
 	conditions := []*v1alpha1.Condition{
-		tb.Condition("cond-1", "foo", tb.ConditionSpec(
-			tb.ConditionSpecCheck("", "foo", tb.Args("bar")),
-		)),
-		tb.Condition("cond-2", "foo", tb.ConditionSpec(
-			tb.ConditionSpecCheck("", "foo", tb.Args("bar")),
-		)),
+		tb.Condition("cond-1", "foo",
+			tb.ConditionLabels(
+				map[string]string{
+					"label-1": "value-1",
+					"label-2": "value-2",
+				}),
+			tb.ConditionSpec(
+				tb.ConditionSpecCheck("", "foo", tb.Args("bar")),
+			)),
+		tb.Condition("cond-2", "foo",
+			tb.ConditionLabels(
+				map[string]string{
+					"label-3": "value-3",
+					"label-4": "value-4",
+				}),
+			tb.ConditionSpec(
+				tb.ConditionSpecCheck("", "foo", tb.Args("bar")),
+			)),
 	}
 	ps := []*v1alpha1.Pipeline{tb.Pipeline("test-pipeline", "foo", tb.PipelineSpec(
 		tb.PipelineTask("hello-world-1", "hello-world",
@@ -1333,9 +1377,13 @@ func TestReconcileWithConditionChecks(t *testing.T) {
 		t.Fatalf("Somehow had error getting completed reconciled run out of fake client: %s", err)
 	}
 	ccNameBase := prName + "-hello-world-1-9l9zj"
-	expectedConditionChecks := []*v1alpha1.TaskRun{
-		makeExpectedTr("cond-1", ccNameBase+"-cond-1-mz4c7"),
-		makeExpectedTr("cond-2", ccNameBase+"-cond-2-mssqb"),
+	ccNames := map[string]string{
+		"cond-1": ccNameBase + "-cond-1-mz4c7",
+		"cond-2": ccNameBase + "-cond-2-mssqb",
+	}
+	expectedConditionChecks := make([]*v1alpha1.TaskRun, len(conditions))
+	for index, condition := range conditions {
+		expectedConditionChecks[index] = makeExpectedTr(condition.Name, ccNames[condition.Name], condition.Labels)
 	}
 
 	// Check that the expected TaskRun was created
@@ -1467,7 +1515,7 @@ func TestReconcileWithFailingConditionChecks(t *testing.T) {
 	}
 }
 
-func makeExpectedTr(condName, ccName string) *v1alpha1.TaskRun {
+func makeExpectedTr(condName, ccName string, labels map[string]string) *v1alpha1.TaskRun {
 	return tb.TaskRun(ccName, "foo",
 		tb.TaskRunOwnerReference("PipelineRun", "test-pipeline-run",
 			tb.OwnerReferenceAPIVersion("tekton.dev/v1alpha1"),
@@ -1477,6 +1525,7 @@ func makeExpectedTr(condName, ccName string) *v1alpha1.TaskRun {
 		tb.TaskRunLabel(pipeline.GroupName+pipeline.PipelineTaskLabelKey, "hello-world-1"),
 		tb.TaskRunLabel("tekton.dev/pipelineRun", "test-pipeline-run"),
 		tb.TaskRunLabel("tekton.dev/conditionCheck", ccName),
+		tb.TaskRunLabels(labels),
 		tb.TaskRunAnnotation("PipelineRunAnnotation", "PipelineRunValue"),
 		tb.TaskRunSpec(
 			tb.TaskRunTaskSpec(

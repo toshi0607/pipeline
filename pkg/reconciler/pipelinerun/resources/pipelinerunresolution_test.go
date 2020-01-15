@@ -128,7 +128,7 @@ var condition = v1alpha1.Condition{
 		Name: "always-true",
 	},
 	Spec: v1alpha1.ConditionSpec{
-		Check: corev1.Container{},
+		Check: v1alpha1.Step{},
 	},
 }
 
@@ -1685,7 +1685,7 @@ func TestResolvedConditionCheck_WithResources(t *testing.T) {
 
 	ptc := v1alpha1.PipelineTaskCondition{
 		ConditionRef: "always-true",
-		Resources: []v1alpha1.PipelineConditionResource{{
+		Resources: []v1alpha1.PipelineTaskInputResource{{
 			Name:     "workspace",
 			Resource: "blah", // The name used in the pipeline
 		}},

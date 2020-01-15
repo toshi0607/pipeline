@@ -188,6 +188,8 @@ var (
 				"-wait_file_content",
 				"-post_file",
 				"/tekton/tools/0",
+				"-termination_path",
+				"/tekton/termination",
 				"-entrypoint",
 				"mkdir",
 				"--",
@@ -199,6 +201,7 @@ var (
 			tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 			tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 			tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+			tb.TerminationMessagePath("/tekton/termination"),
 		}
 
 		actualOps = append(actualOps, ops...)
@@ -268,6 +271,7 @@ func TestReconcile_ExplicitDefaultSA(t *testing.T) {
 		name:    "success",
 		taskRun: taskRunSuccess,
 		wantPod: tb.Pod("test-taskrun-run-success-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-task"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-run-success"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -285,6 +289,8 @@ func TestReconcile_ExplicitDefaultSA(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/mycmd",
 						"--",
@@ -295,6 +301,7 @@ func TestReconcile_ExplicitDefaultSA(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -302,6 +309,7 @@ func TestReconcile_ExplicitDefaultSA(t *testing.T) {
 		name:    "serviceaccount",
 		taskRun: taskRunWithSaSuccess,
 		wantPod: tb.Pod("test-taskrun-with-sa-run-success-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-with-sa"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-with-sa-run-success"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -319,6 +327,8 @@ func TestReconcile_ExplicitDefaultSA(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/mycmd",
 						"--",
@@ -329,6 +339,7 @@ func TestReconcile_ExplicitDefaultSA(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -519,6 +530,7 @@ func TestReconcile(t *testing.T) {
 		name:    "success",
 		taskRun: taskRunSuccess,
 		wantPod: tb.Pod("test-taskrun-run-success-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-task"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-run-success"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -535,6 +547,8 @@ func TestReconcile(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/mycmd",
 						"--",
@@ -545,6 +559,7 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -552,6 +567,7 @@ func TestReconcile(t *testing.T) {
 		name:    "serviceaccount",
 		taskRun: taskRunWithSaSuccess,
 		wantPod: tb.Pod("test-taskrun-with-sa-run-success-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-with-sa"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-with-sa-run-success"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -569,6 +585,8 @@ func TestReconcile(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/mycmd",
 						"--",
@@ -579,6 +597,7 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -586,6 +605,7 @@ func TestReconcile(t *testing.T) {
 		name:    "params",
 		taskRun: taskRunSubstitution,
 		wantPod: tb.Pod("test-taskrun-substitution-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-task-with-substitution"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-substitution"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -610,39 +630,44 @@ func TestReconcile(t *testing.T) {
 				getMkdirResourceContainer("myimage", "/workspace/output/myimage", "mssqb"),
 				tb.PodContainer("step-git-source-git-resource-mz4c7", "override-with-git:latest",
 					tb.Command(entrypointLocation),
-					tb.Args("-wait_file", "/tekton/tools/0", "-post_file", "/tekton/tools/1", "-entrypoint", "/ko-app/git-init", "--",
-						"-url", "https://foo.git", "-revision", "master", "-path", "/workspace/workspace"),
+					tb.Args("-wait_file", "/tekton/tools/0", "-post_file", "/tekton/tools/1", "-termination_path",
+						"/tekton/termination", "-entrypoint", "/ko-app/git-init", "--", "-url", "https://foo.git",
+						"-revision", "master", "-path", "/workspace/workspace"),
 					tb.WorkingDir(workspaceDir),
 					tb.EnvVar("HOME", "/tekton/home"),
 					tb.EnvVar("TEKTON_RESOURCE_NAME", "git-resource"),
 					tb.VolumeMount("tekton-internal-tools", "/tekton/tools"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 				tb.PodContainer("step-mycontainer", "myimage",
 					tb.Command(entrypointLocation),
-					tb.Args("-wait_file", "/tekton/tools/1", "-post_file", "/tekton/tools/2", "-entrypoint", "/mycmd", "--",
-						"--my-arg=foo", "--my-arg-with-default=bar", "--my-arg-with-default2=thedefault",
-						"--my-additional-arg=gcr.io/kristoff/sven"),
+					tb.Args("-wait_file", "/tekton/tools/1", "-post_file", "/tekton/tools/2", "-termination_path",
+						"/tekton/termination", "-entrypoint", "/mycmd", "--", "--my-arg=foo", "--my-arg-with-default=bar",
+						"--my-arg-with-default2=thedefault", "--my-additional-arg=gcr.io/kristoff/sven"),
 					tb.WorkingDir(workspaceDir),
 					tb.EnvVar("HOME", "/tekton/home"),
 					tb.VolumeMount("tekton-internal-tools", "/tekton/tools"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 				tb.PodContainer("step-myothercontainer", "myotherimage",
 					tb.Command(entrypointLocation),
-					tb.Args("-wait_file", "/tekton/tools/2", "-post_file", "/tekton/tools/3", "-entrypoint", "/mycmd", "--",
-						"--my-other-arg=https://foo.git"),
+					tb.Args("-wait_file", "/tekton/tools/2", "-post_file", "/tekton/tools/3", "-termination_path",
+						"/tekton/termination", "-entrypoint", "/mycmd", "--", "--my-other-arg=https://foo.git"),
 					tb.WorkingDir(workspaceDir),
 					tb.EnvVar("HOME", "/tekton/home"),
 					tb.VolumeMount("tekton-internal-tools", "/tekton/tools"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 				tb.PodContainer("step-image-digest-exporter-9l9zj", "override-with-imagedigest-exporter-image:latest",
 					tb.Command(entrypointLocation),
-					tb.Args("-wait_file", "/tekton/tools/3", "-post_file", "/tekton/tools/4", "-entrypoint", "/ko-app/imagedigestexporter", "--",
+					tb.Args("-wait_file", "/tekton/tools/3", "-post_file", "/tekton/tools/4", "-termination_path",
+						"/tekton/termination", "-entrypoint", "/ko-app/imagedigestexporter", "--",
 						"-images", "[{\"name\":\"image-resource\",\"type\":\"image\",\"url\":\"gcr.io/kristoff/sven\",\"digest\":\"\",\"OutputImageDir\":\"/workspace/output/myimage\"}]"),
 					tb.WorkingDir(workspaceDir),
 					tb.EnvVar("HOME", "/tekton/home"),
@@ -650,6 +675,7 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
 					tb.TerminationMessagePolicy(corev1.TerminationMessageFallbackToLogsOnError),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -657,6 +683,7 @@ func TestReconcile(t *testing.T) {
 		name:    "taskrun-with-taskspec",
 		taskRun: taskRunWithTaskSpec,
 		wantPod: tb.Pod("test-taskrun-with-taskspec-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-with-taskspec"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
 			tb.PodOwnerReference("TaskRun", "test-taskrun-with-taskspec",
@@ -672,6 +699,8 @@ func TestReconcile(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/ko-app/git-init",
 						"--",
@@ -689,16 +718,18 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 				tb.PodContainer("step-mycontainer", "myimage",
 					tb.Command(entrypointLocation),
 					tb.WorkingDir(workspaceDir),
-					tb.Args("-wait_file", "/tekton/tools/0", "-post_file", "/tekton/tools/1", "-entrypoint", "/mycmd", "--",
-						"--my-arg=foo"),
+					tb.Args("-wait_file", "/tekton/tools/0", "-post_file", "/tekton/tools/1", "-termination_path",
+						"/tekton/termination", "-entrypoint", "/mycmd", "--", "--my-arg=foo"),
 					tb.EnvVar("HOME", "/tekton/home"),
 					tb.VolumeMount("tekton-internal-tools", "/tekton/tools"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -706,6 +737,7 @@ func TestReconcile(t *testing.T) {
 		name:    "success-with-cluster-task",
 		taskRun: taskRunWithClusterTask,
 		wantPod: tb.Pod("test-taskrun-with-cluster-task-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-cluster-task"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-with-cluster-task"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -722,6 +754,8 @@ func TestReconcile(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/mycmd",
 						"--",
@@ -732,6 +766,7 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -739,6 +774,7 @@ func TestReconcile(t *testing.T) {
 		name:    "taskrun-with-resource-spec-task-spec",
 		taskRun: taskRunWithResourceSpecAndTaskSpec,
 		wantPod: tb.Pod("test-taskrun-with-resource-spec-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-with-resource-spec"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
 			tb.PodOwnerReference("TaskRun", "test-taskrun-with-resource-spec",
@@ -754,6 +790,8 @@ func TestReconcile(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/ko-app/git-init",
 						"--",
@@ -770,15 +808,18 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 				tb.PodContainer("step-mystep", "ubuntu",
 					tb.Command(entrypointLocation),
-					tb.Args("-wait_file", "/tekton/tools/0", "-post_file", "/tekton/tools/1", "-entrypoint", "/mycmd", "--"),
+					tb.Args("-wait_file", "/tekton/tools/0", "-post_file", "/tekton/tools/1", "-termination_path",
+						"/tekton/termination", "-entrypoint", "/mycmd", "--"),
 					tb.WorkingDir(workspaceDir),
 					tb.EnvVar("HOME", "/tekton/home"),
 					tb.VolumeMount("tekton-internal-tools", "/tekton/tools"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -786,6 +827,7 @@ func TestReconcile(t *testing.T) {
 		name:    "taskrun-with-pod",
 		taskRun: taskRunWithPod,
 		wantPod: tb.Pod("test-taskrun-with-pod-pod-abcde", "foo",
+			tb.PodAnnotation(podconvert.ReleaseAnnotation, podconvert.ReleaseAnnotationValue),
 			tb.PodLabel(taskNameLabelKey, "test-task"),
 			tb.PodLabel(taskRunNameLabelKey, "test-taskrun-with-pod"),
 			tb.PodLabel(podconvert.ManagedByLabelKey, podconvert.ManagedByLabelValue),
@@ -802,6 +844,8 @@ func TestReconcile(t *testing.T) {
 						"-wait_file_content",
 						"-post_file",
 						"/tekton/tools/0",
+						"-termination_path",
+						"/tekton/termination",
 						"-entrypoint",
 						"/mycmd",
 						"--"),
@@ -811,6 +855,7 @@ func TestReconcile(t *testing.T) {
 					tb.VolumeMount("tekton-internal-downward", "/tekton/downward"),
 					tb.VolumeMount("tekton-internal-workspace", workspaceDir),
 					tb.VolumeMount("tekton-internal-home", "/tekton/home"),
+					tb.TerminationMessagePath("/tekton/termination"),
 				),
 			),
 		),
@@ -1470,42 +1515,22 @@ func TestReconcileCloudEvents(t *testing.T) {
 	}
 }
 
-func TestUpdateTaskRunStatus_withValidJson(t *testing.T) {
+func TestUpdateTaskRunResourceResult(t *testing.T) {
 	for _, c := range []struct {
-		desc    string
-		podLog  []byte
-		taskRun *v1alpha1.TaskRun
-		want    []v1alpha1.PipelineResourceResult
+		desc          string
+		podStatus     corev1.PodStatus
+		taskRunStatus *v1alpha1.TaskRunStatus
+		want          []v1alpha1.PipelineResourceResult
 	}{{
-		desc:   "image resource updated",
-		podLog: []byte("[{\"name\":\"source-image\",\"digest\":\"sha256:1234\"}]"),
-		taskRun: &v1alpha1.TaskRun{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-taskrun-run-output-steps",
-				Namespace: "marshmallow",
-			},
-			Spec: v1alpha1.TaskRunSpec{
-				Inputs: v1alpha1.TaskRunInputs{
-					Resources: []v1alpha1.TaskResourceBinding{{
-						PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
-							Name: "source-image",
-							ResourceRef: &v1alpha1.PipelineResourceRef{
-								Name: "source-image-1",
-							},
-						},
-					}},
+		desc: "image resource updated",
+		podStatus: corev1.PodStatus{
+			ContainerStatuses: []corev1.ContainerStatus{{
+				State: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{
+						Message: `[{"name":"source-image","digest":"sha256:1234"}]`,
+					},
 				},
-				Outputs: v1alpha1.TaskRunOutputs{
-					Resources: []v1alpha1.TaskResourceBinding{{
-						PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
-							Name: "source-image",
-							ResourceRef: &v1alpha1.PipelineResourceRef{
-								Name: "source-image-1",
-							},
-						},
-					}},
-				},
-			},
+			}},
 		},
 		want: []v1alpha1.PipelineResourceResult{{
 			Name:   "source-image",
@@ -1514,80 +1539,53 @@ func TestUpdateTaskRunStatus_withValidJson(t *testing.T) {
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
-			c.taskRun.Status.SetCondition(&apis.Condition{
+			tr := &v1alpha1.TaskRun{}
+			tr.Status.SetCondition(&apis.Condition{
 				Type:   apis.ConditionSucceeded,
 				Status: corev1.ConditionTrue,
 			})
-			if err := updateTaskRunStatusWithResourceResult(c.taskRun, c.podLog); err != nil {
-				t.Errorf("UpdateTaskRunStatusWithResourceResult failed with error: %s", err)
+			if err := updateTaskRunResourceResult(tr, c.podStatus); err != nil {
+				t.Errorf("updateTaskRunResourceResult: %s", err)
 			}
-			if d := cmp.Diff(c.want, c.taskRun.Status.ResourcesResult); d != "" {
-				t.Errorf("post build steps mismatch (-want, +got): %s", d)
+			if d := cmp.Diff(c.want, tr.Status.ResourcesResult); d != "" {
+				t.Errorf("updateTaskRunResourceResult (-want, +got): %s", d)
 			}
 		})
 	}
 }
 
-func TestUpdateTaskRunStatus_withInvalidJson(t *testing.T) {
+func TestUpdateTaskRunResourceResult_Errors(t *testing.T) {
 	for _, c := range []struct {
-		desc    string
-		podLog  []byte
-		taskRun *v1alpha1.TaskRun
-		want    []v1alpha1.PipelineResourceResult
+		desc          string
+		podStatus     corev1.PodStatus
+		taskRunStatus *v1alpha1.TaskRunStatus
+		want          []v1alpha1.PipelineResourceResult
 	}{{
-		desc:   "image resource exporter with malformed json output",
-		podLog: []byte("extralogscamehere[{\"name\":\"source-image\",\"digest\":\"sha256:1234\"}]"),
-		taskRun: &v1alpha1.TaskRun{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-taskrun-run-output-steps",
-				Namespace: "marshmallow",
-			},
-			Spec: v1alpha1.TaskRunSpec{
-				Inputs: v1alpha1.TaskRunInputs{
-					Resources: []v1alpha1.TaskResourceBinding{{
-						PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
-							Name: "source-image",
-							ResourceRef: &v1alpha1.PipelineResourceRef{
-								Name: "source-image-1",
-							},
-						},
-					}},
+		desc: "image resource exporter with malformed json output",
+		podStatus: corev1.PodStatus{
+			ContainerStatuses: []corev1.ContainerStatus{{
+				State: corev1.ContainerState{
+					Terminated: &corev1.ContainerStateTerminated{
+						Message: `MALFORMED JSON{"digest":"sha256:1234"}`,
+					},
 				},
-				Outputs: v1alpha1.TaskRunOutputs{
-					Resources: []v1alpha1.TaskResourceBinding{{
-						PipelineResourceBinding: v1alpha1.PipelineResourceBinding{
-							Name: "source-image",
-							ResourceRef: &v1alpha1.PipelineResourceRef{
-								Name: "source-image-1",
-							},
-						},
-					}},
-				},
-			},
+			}},
 		},
-		want: nil,
-	}, {
-		desc:   "task with no image resource ",
-		podLog: []byte(""),
-		taskRun: &v1alpha1.TaskRun{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-taskrun-run-output-steps",
-				Namespace: "marshmallow",
-			},
+		taskRunStatus: &v1alpha1.TaskRunStatus{
+			Status: duckv1beta1.Status{Conditions: []apis.Condition{{
+				Type:   apis.ConditionSucceeded,
+				Status: corev1.ConditionTrue,
+			}}},
 		},
 		want: nil,
 	}} {
 		t.Run(c.desc, func(t *testing.T) {
 			names.TestingSeed()
-			c.taskRun.Status.SetCondition(&apis.Condition{
-				Type:   apis.ConditionSucceeded,
-				Status: corev1.ConditionTrue,
-			})
-			if err := updateTaskRunStatusWithResourceResult(c.taskRun, c.podLog); err == nil {
-				t.Error("UpdateTaskRunStatusWithResourceResult expected to fail with error")
+			if err := updateTaskRunResourceResult(&v1alpha1.TaskRun{Status: *c.taskRunStatus}, c.podStatus); err == nil {
+				t.Error("Expected error, got nil")
 			}
-			if d := cmp.Diff(c.want, c.taskRun.Status.ResourcesResult); d != "" {
-				t.Errorf("post build steps mismatch (-want, +got): %s", d)
+			if d := cmp.Diff(c.want, c.taskRunStatus.ResourcesResult); d != "" {
+				t.Errorf("updateTaskRunResourceResult (-want, +got): %s", d)
 			}
 		})
 	}

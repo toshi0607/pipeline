@@ -46,7 +46,7 @@ spec:
   steps:
 
   - name: build-push-base-images
-    image: gcr.io/kaniko-project/executor:v0.9.0
+    image: gcr.io/kaniko-project/executor:v0.15.0
     command:
     - /kaniko/executor
     args:
@@ -138,6 +138,9 @@ spec:
       for d in cmd/*; do
         ln -s ${TMPDIR}/source.tar.gz ${d}/kodata/
       done
+
+      # Rewrite "devel" to inputs.params.versionTag
+      sed -i 's/devel/$(inputs.params.versionTag)/g' /workspace/go/src/github.com/tektoncd/pipeline/config/controller.yaml
 
       # Publish images and create release.yaml
       ko resolve --preserve-import-paths -t $(inputs.params.versionTag) -f /workspace/go/src/github.com/tektoncd/pipeline/config/ > /workspace/output/bucket/latest/release.yaml

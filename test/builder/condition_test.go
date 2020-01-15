@@ -29,6 +29,11 @@ import (
 
 func TestCondition(t *testing.T) {
 	condition := tb.Condition("cond-name", "foo",
+		tb.ConditionLabels(
+			map[string]string{
+				"label-1": "label-value-1",
+				"label-2": "label-value-2",
+			}),
 		tb.ConditionSpec(tb.ConditionSpecCheck("", "ubuntu", tb.Command("exit 0")),
 			tb.ConditionParamSpec("param-1", v1alpha1.ParamTypeString,
 				tb.ParamSpecDefault("default"),
@@ -42,11 +47,17 @@ func TestCondition(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cond-name",
 			Namespace: "foo",
+			Labels: map[string]string{
+				"label-1": "label-value-1",
+				"label-2": "label-value-2",
+			},
 		},
 		Spec: v1alpha1.ConditionSpec{
-			Check: corev1.Container{
-				Image:   "ubuntu",
-				Command: []string{"exit 0"},
+			Check: v1alpha1.Step{
+				Container: corev1.Container{
+					Image:   "ubuntu",
+					Command: []string{"exit 0"},
+				},
 			},
 			Params: []v1alpha1.ParamSpec{{
 				Name:        "param-1",
@@ -69,4 +80,32 @@ func TestCondition(t *testing.T) {
 	if d := cmp.Diff(expected, condition); d != "" {
 		t.Fatalf("Condition diff -want, +got: %v", d)
 	}
+}
+
+func TestConditionWithScript(t *testing.T) {
+	condition := tb.Condition("cond-name", "foo",
+		tb.ConditionSpec(tb.ConditionSpecCheck("", "ubuntu"),
+			tb.ConditionSpecCheckScript("ls /tmp"),
+		),
+	)
+
+	expected := &v1alpha1.Condition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cond-name",
+			Namespace: "foo",
+		},
+		Spec: v1alpha1.ConditionSpec{
+			Check: v1alpha1.Step{
+				Container: corev1.Container{
+					Image: "ubuntu",
+				},
+				Script: "ls /tmp",
+			},
+		},
+	}
+
+	if d := cmp.Diff(expected, condition); d != "" {
+		t.Fatalf("Condition diff -want, +got: %v", d)
+	}
+
 }

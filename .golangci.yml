@@ -3,7 +3,7 @@ run:
   - e2e
   skip-dirs:
   - vendor
-  - pkg/client/clientset/(.*)/fake
+  - pkg/client
   timeout: 5m
 linters-settings:
   errcheck:

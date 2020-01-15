@@ -56,9 +56,7 @@ following fields:
     `timeout` is empty, the default timeout will be applied. If the value is set to 0,
     there is no timeout. You can also follow the instruction [here](#Configuring-default-timeout)
     to configure the default timeout.
-  - [`podTemplate`](#pod-template) - Specifies a subset of
-    [`PodSpec`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#pod-v1-core)
-	  configuration that will be used as the basis for the `Task` pod.
+  - [`podTemplate`](#pod-template) - Specifies a [pod template](./podtemplates.md) that will be used as the basis for the `Task` pod.
   - [`workspaces`](#workspaces) - Specify the actual volumes to use for the
     [workspaces](tasks.md#workspaces) declared by a `Task`
 
@@ -89,7 +87,7 @@ spec:
           type: git
     steps:
       - name: build-and-push
-        image: gcr.io/kaniko-project/executor:v0.9.0
+        image: gcr.io/kaniko-project/executor:v0.15.0
         # specifying DOCKER_CONFIG is required to allow kaniko to detect docker credential
         env:
           - name: "DOCKER_CONFIG"
@@ -151,10 +149,22 @@ The `paths` field can be used to [override the paths to a resource](./resources.
 
 ### Configuring Default Timeout
 
-You can configure the default timeout by changing the value of `default-timeout-minutes`
-in [`config/config-defaults.yaml`](./../config/config-defaults.yaml). The default timeout
-is 60 minutes, if `default-timeout-minutes` is not available. There is no timeout by
-default, if `default-timeout-minutes` is set to 0.
+You can configure the default timeout by changing the value of
+`default-timeout-minutes` in
+[`config/config-defaults.yaml`](./../config/config-defaults.yaml).
+
+The `timeout` format is a `duration` as validated by Go's
+[`ParseDuration`](https://golang.org/pkg/time/#ParseDuration), valid format for
+examples are :
+
+- `1h30m`
+- `1h`
+- `1m`
+- `60s`
+
+The default timeout is 60 minutes, if `default-timeout-minutes` is not
+available. There is no timeout by default, if `default-timeout-minutes` is set
+to 0.
 
 ### Service Account
 
@@ -172,44 +182,8 @@ For examples and more information about specifying service accounts, see the
 
 ## Pod Template
 
-Specifies a subset of
-[`PodSpec`](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#pod-v1-core)
-configuration that will be used as the basis for the `Task` pod. This
-allows to customize some Pod specific field per `Task` execution, aka
-`TaskRun`. The current field supported are:
-
-- `nodeSelector`: a selector which must be true for the pod to fit on
-  a node, see [here](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/).
-- `tolerations`: allow (but do not require) the pods to schedule onto
-  nodes with matching taints.
-- `affinity`: allow to constrain which nodes your pod is eligible to
-  be scheduled on, based on labels on the node.
-- `securityContext`: pod-level security attributes and common
-  container settings, like `runAsUser` or `selinux`.
-- `volumes`: list of volumes that can be mounted by containers
-  belonging to the pod. This lets the user of a Task define which type
-  of volume to use for a Task `volumeMount`
-- `runtimeClassName`: the name of a
-  [runtime class](https://kubernetes.io/docs/concepts/containers/runtime-class/)
-  to use to run the pod.
-- `automountServiceAccountToken`: whether the token for the service account
-  being used by the pod should be automatically provided inside containers at a
-  predefined path. Defaults to `true`.
-- `dnsPolicy`: the
-  [DNS policy](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy)
-  for the pod, one of `ClusterFirst`, `Default`, or `None`. Defaults to
-  `ClusterFirst`. Note that `ClusterFirstWithHostNet` is not supported by Tekton
-  as Tekton pods cannot run with host networking.
-- `dnsConfig`:
-  [additional DNS configuration](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config)
-  for the pod, such as nameservers and search domains.
-- `enableServiceLinks`: whether services in the same namespace as the pod will
-  be exposed as environment variables to the pod, similar to Docker service
-  links. Defaults to `true`.
-- `priorityClassName`: the name of the
-  [priority class](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/)
-  to use when running the pod. Use this, for example, to selectively enable
-  preemption on lower priority workloads.
+Specifies a [pod template](./podtemplates.md) configuration that will be used as the basis for the `Task` pod. This
+allows to customize some Pod specific field per `Task` execution, aka `TaskRun`.
 
 In the following example, the Task is defined with a `volumeMount`
 (`my-cache`), that is provided by the TaskRun, using a
@@ -257,6 +231,7 @@ at runtime you need to map the `workspaces` to actual physical volumes with
 
 * [`emptyDir`](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir)
 * [`persistentVolumeClaim`](https://kubernetes.io/docs/concepts/storage/volumes/#persistentvolumeclaim)
+* [`configMap`](https://kubernetes.io/docs/concepts/storage/volumes/#configmap)
 
 _If you need support for a `VolumeSource` not listed here
 [please open an issue](https://github.com/tektoncd/pipeline/issues) or feel free to
@@ -284,6 +259,24 @@ Or to use [`emptyDir`](https://kubernetes.io/docs/concepts/storage/volumes/#empt
 workspaces:
 - name: myworkspace
   emptyDir: {}
+```
+
+A ConfigMap can also be used as a workspace with the following caveats:
+
+1. ConfigMap volume sources are always mounted as read-only inside a task's
+containers - tasks cannot write content to them and a step may error out
+and fail the task if a write is attempted.
+2. The ConfigMap you want to use as a workspace must already exist prior
+to the TaskRun being submitted.
+
+To use a [`configMap`](https://kubernetes.io/docs/concepts/storage/volumes/#configmap)
+as a `workspace`:
+
+```yaml
+workspaces:
+- name: myworkspace
+  configmap:
+    name: my-configmap
 ```
 
 _For a complete example see [workspace.yaml](../examples/taskruns/workspace.yaml)._
@@ -319,6 +312,9 @@ steps:
 
 Fields include start and stop times for the `TaskRun` and each `Step` and exit codes.
 For each step we also include the fully-qualified image used, with the digest.
+
+If any pods have been [`OOMKilled`](https://kubernetes.io/docs/tasks/administer-cluster/out-of-resource/)
+by Kubernetes, the `Taskrun` will be marked as failed even if the exitcode is 0.
 
 ### Steps
 
@@ -357,19 +353,6 @@ creating `read-repo-run`. Task `read-task` has git input resource and TaskRun
 
 ```yaml
 apiVersion: tekton.dev/v1alpha1
-kind: TaskRun
-metadata:
-  name: read-repo-run
-spec:
-  taskRef:
-    name: read-task
-  inputs:
-    resources:
-      - name: workspace
-        resourceRef:
-          name: go-example-git
----
-apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
 metadata:
   name: go-example-git
@@ -391,10 +374,20 @@ spec:
   steps:
     - name: readme
       image: ubuntu
-      command:
-        - /bin/bash
-      args:
-        - "cat README.md"
+      script: cat workspace/README.md
+---
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  name: read-repo-run
+spec:
+  taskRef:
+    name: read-task
+  inputs:
+    resources:
+      - name: workspace
+        resourceRef:
+          name: go-example-git
 ```
 
 ### Example with embedded specs
@@ -432,7 +425,7 @@ spec:
           type: git
     steps:
       - name: build-and-push
-        image: gcr.io/kaniko-project/executor:v0.9.0
+        image: gcr.io/kaniko-project/executor:v0.15.0
         # specifying DOCKER_CONFIG is required to allow kaniko to detect docker credential
         env:
           - name: "DOCKER_CONFIG"
